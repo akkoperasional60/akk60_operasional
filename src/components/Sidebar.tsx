@@ -1,1472 +1,1051 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, UserCheck, UserX, Clock, ShieldAlert, CheckCircle2, XCircle, 
-  Search, Filter, Plus, Shield, User, Building, Phone, Mail, Calendar, 
-  AlertTriangle, Edit3, Lock, Save, UserCog, ShieldCheck, X, Key, Copy, Check,
-  ChevronDown, ChevronRight, Settings, Eye, EyeOff, BarChart3
+import {
+  LayoutDashboard,
+  Calendar,
+  Truck,
+  MapPin,
+  FileSpreadsheet,
+  FileText,
+  Users,
+  Database,
+  Radio,
+  History,
+  Menu,
+  X,
+  LogOut,
+  LogIn,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Building2,
+  ShoppingBag,
+  Activity,
+  Timer,
+  Award,
+  Settings,
+  Briefcase,
+  Layers,
+  Sparkles,
+  User,
+  ShieldAlert,
+  Percent,
+  TrendingUp,
+  Wrench,
+  Fuel,
+  Globe,
+  Megaphone,
+  Smartphone,
+  Download,
+  Zap,
+  KeyRound,
+  ShieldCheck,
+  Video,
+  Brush,
+  BarChart3
 } from 'lucide-react';
-import { UserProfile, UserRole, UserApprovalStatus, UserPermissions } from '../types';
+import { AkkLogo } from './AkkLogo';
+import { ThemeSwitcher } from './ThemeSwitcher';
+import { AndroidApkDownloadModal } from './AndroidApkDownloadModal';
+import { UserProfile } from '../types';
 import { logisticsStore } from '../services/store';
+import { driverReportService } from '../services/driverReportService';
+import { canAccess } from '../utils/rbac';
 
+export type NavTab =
+  | 'dashboard'
+  | 'driver_portal'
+  | 'driver_reports'
+  | 'analytics_reports'
+  | 'operational_dashboard'
+  | 'schedules'
+  | 'fleets'
+  | 'spareparts'
+  | 'fuel_efficiency'
+  | 'crew_history'
+  | 'tracking_eval'
+  | 'tracksolid'
+  | 'fleet_forms'
+  | 'sales_dashboard'
+  | 'sales_activities'
+  | 'sales_schedules'
+  | 'sales_loading_duration'
+  | 'sales_skill_matrix'
+  | 'sales_jobdesk'
+  | 'sales_kpi'
+  | 'sales_kpi_individual'
+  | 'sales_kpi_fines'
+  | 'sales_kpi_nusantara'
+  | 'sales_kpi_omset'
+  | 'customer_map'
+  | 'purchasing_dashboard'
+  | 'purchasing_stock_overview'
+  | 'purchasing_stock_forecast'
+  | 'hr_dashboard'
+  | 'ga_security'
+  | 'ga_hk'
+  | 'ga_aset'
+  | 'training_videos'
+  | 'training_karyawan'
+  | 'finance_dashboard'
+  | 'warehouse_dashboard'
+  | 'marketing_online'
+  | 'marketing_offline'
+  | 'activity_log'
+  | 'users'
+  | 'architecture'
+  | 'e2e_testing';
 
-const MODULE_DEFINITIONS = [
-  {
-    id: 'logistics',
-    name: 'Logistik & Pengiriman',
-    subMenus: [
-      { id: 'dashboard_logistik', name: 'Dashboard Logistik' },
-      { id: 'armada_ceklis', name: 'Armada & Ceklis KIR' },
-      { id: 'live_map', name: 'Live Map GPS' },
-      { id: 'monitoring_sla', name: 'Monitoring SLA Pengiriman' },
-      { id: 'rencana_rute', name: 'Rencana Rute & Jadwal' },
-      { id: 'portal_driver', name: 'Portal Driver Mobile' }
-    ]
-  },
-  {
-    id: 'sales_admin',
-    name: 'Admin Penjualan',
-    subMenus: [
-      { id: 'dashboard_penjualan', name: 'Dashboard Penjualan' },
-      { id: 'aktivitas_harian', name: 'Aktivitas Harian Admin' },
-      { id: 'jadwal_admin', name: 'Jadwal Admin' },
-      { id: 'durasi_muat', name: 'Durasi Muat' },
-      { id: 'matriks_skil', name: 'Matriks Skil' },
-      { id: 'pengaturan_sop', name: 'Pengaturan SOP & Jobdesk' },
-      { id: 'data_kpi', name: 'Data KPI' }
-    ]
-  },
-  {
-    id: 'warehouse',
-    name: 'Gudang',
-    subMenus: [
-      { id: 'stok_barang', name: 'Stok Barang & Material' },
-      { id: 'permintaan_barang', name: 'Permintaan Barang' },
-      { id: 'opname_stok', name: 'Opname Stok Fisik' },
-      { id: 'ceklis_muat', name: 'Ceklis Muat Barang' }
-    ]
-  },
-  {
-    id: 'marketing',
-    name: 'Marketing',
-    subMenus: [
-      { id: 'kampanye', name: 'Kampanye & Promosi' },
-      { id: 'leads_pipeline', name: 'Leads Pipeline Toko' },
-      { id: 'laporan_kunjungan', name: 'Laporan Kunjungan Lapangan' }
-    ]
-  },
-  {
-    id: 'purchasing',
-    name: 'Admin Pembelian',
-    subMenus: [
-      { id: 'permintaan_pembelian', name: 'Permintaan Pembelian (PR)' },
-      { id: 'po_vendor', name: 'Purchase Order (PO) Vendor' },
-      { id: 'evaluasi_harga', name: 'Evaluasi Harga Supplier' }
-    ]
-  },
-  {
-    id: 'finance_tax',
-    name: 'Finance & Tax',
-    subMenus: [
-      { id: 'kas_bank', name: 'Kas & Bank Operasional' },
-      { id: 'faktur_pajak', name: 'Faktur Pajak & E-Faktur' },
-      { id: 'rekonsiliasi', name: 'Rekonsiliasi Keuangan' },
-      { id: 'laba_rugi', name: 'Laporan Laba Rugi' }
-    ]
-  },
-  {
-    id: 'hr',
-    name: 'Human Resources',
-    subMenus: [
-      { id: 'hr_data_karyawan', name: 'HR - Data Karyawan & Presensi' },
-      { id: 'hr_gaji_kpi', name: 'HR - Gaji, Lembur & Penilaian Kinerja' },
-      { id: 'ga_security', name: 'GA - Security (Keamanan Pabrik)' },
-      { id: 'ga_hk', name: 'GA - HK (Housekeeping & Kebersihan)' },
-      { id: 'ga_aset', name: 'GA - Aset (Inventaris & Fasilitas)' },
-      { id: 'td_video_training', name: 'Training & Development - Video Training' },
-      { id: 'td_training_karyawan', name: 'Training & Development - Training Karyawan' }
-    ]
-  },
-  {
-    id: 'sistem_pengguna',
-    name: 'Sistem Pengguna & Akses Eksekutif',
-    subMenus: [
-      { id: 'daftar_pengguna', name: 'Daftar Pengguna Sistem' },
-      { id: 'manajemen_hak_akses', name: 'Manajemen Hak Akses & Role' },
-      { id: 'dashboard_eksekutif', name: 'Dashboard Eksekutif (Akses Terbatas)' },
-      { id: 'log_aktivitas_sistem', name: 'Log Aktivitas Sistem' },
-      { id: 'persetujuan_akun', name: 'Persetujuan Akun (Approval)' }
-    ]
-  }
-];
-
-const DEPARTMENT_FILTER_OPTIONS = [
-  { id: 'all', label: 'Semua Role / Departemen', shortLabel: 'Semua', icon: '🌐' },
-  { id: 'logistics', label: 'Logistik & Pengiriman', shortLabel: 'Logistik', icon: '🚚' },
-  { id: 'sales', label: 'Admin Penjualan (Sales)', shortLabel: 'Sales', icon: '💼' },
-  { id: 'warehouse', label: 'Gudang (Warehouse)', shortLabel: 'Gudang', icon: '📦' },
-  { id: 'marketing', label: 'Marketing', shortLabel: 'Marketing', icon: '📢' },
-  { id: 'purchasing', label: 'Admin Pembelian', shortLabel: 'Pembelian', icon: '🛒' },
-  { id: 'finance', label: 'Finance & Tax', shortLabel: 'Finance', icon: '💰' },
-  { id: 'hr', label: 'Human Resources & GA', shortLabel: 'HR & GA', icon: '👥' },
-  { id: 'super_admin', label: 'Super Admin', shortLabel: 'Super Admin', icon: '👑' },
-];
-
-export interface UserManagementProps {
-  onNavigateToE2E?: () => void;
+interface SidebarProps {
+  currentTab: NavTab;
+  onSelectTab: (tab: NavTab) => void;
+  onOpenAuth: (defaultTab?: 'login' | 'register') => void;
+  isMinimized?: boolean;
+  onToggleMinimize?: () => void;
 }
 
-export const UserManagement: React.FC<UserManagementProps> = ({ onNavigateToE2E }) => {
-  const [users, setUsers] = useState<UserProfile[]>(logisticsStore.getUsers());
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentTab,
+  onSelectTab,
+  onOpenAuth,
+  isMinimized = false,
+  onToggleMinimize
+}) => {
   const [currentUser, setCurrentUser] = useState<UserProfile>(logisticsStore.getCurrentUser());
-  const [statusFilter, setStatusFilter] = useState<'all' | UserApprovalStatus>('all');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [pendingUsersCount, setPendingUsersCount] = useState<number>(logisticsStore.getPendingUsersCount());
+  const [pendingReportsCount, setPendingReportsCount] = useState<number>(0);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Super Admin check
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const [isLogistikOpen, setIsLogistikOpen] = useState(true);
+  const [isSalesAdminOpen, setIsSalesAdminOpen] = useState(true);
+  const [isKpiDropdownOpen, setIsKpiDropdownOpen] = useState(false);
+  const [isPurchasingOpen, setIsPurchasingOpen] = useState(true);
+  const [isPurchasingStockOpen, setIsPurchasingStockOpen] = useState(false);
+  const [isHrOpen, setIsHrOpen] = useState(true);
+  const [isFinanceOpen, setIsFinanceOpen] = useState(true);
+  const [isWarehouseOpen, setIsWarehouseOpen] = useState(true);
+  const [isMarketingOpen, setIsMarketingOpen] = useState(true);
+  const [isRbacOpen, setIsRbacOpen] = useState(false);
+  const [isApkModalOpen, setIsApkModalOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState<string>('');
 
-  // Selected User for Split-Screen Detail View
-  const [selectedUserId, setSelectedUserId] = useState<string>(users[0]?.id || '');
-  const selectedUser = users.find(u => u.id === selectedUserId) || users[0] || null;
+  const isKpiActive = currentTab === 'sales_kpi' || (currentTab && currentTab.startsWith('sales_kpi_'));
 
-  // Granular Access & Menu Permissions State
-  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({ logistics: true, sales_admin: true });
-  const [editingPermissions, setEditingPermissions] = useState<UserPermissions['modules']>({});
-  
-  // Copy Access Modal State
-  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-  const [sourceUserIdForCopy, setSourceUserIdForCopy] = useState<string>('');
-  
-  // Delete Confirmation Modal State
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  useEffect(() => {
+    if (isKpiActive) {
+      setIsKpiDropdownOpen(true);
+    }
+  }, [currentTab, isKpiActive]);
 
-  // Change Password Modal State
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [newPasswordInput, setNewPasswordInput] = useState('');
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB'
+      );
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  // In-Page Pop-up Notification Modal State (Request: popup di depan halaman user manajemen)
-  const [pageModalNotification, setPageModalNotification] = useState<{
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'error' | 'info';
-  } | null>(null);
-
-  const showNotification = (title: string, message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') => {
-    setPageModalNotification({ title, message, type });
-  };
-
-  // Edit User Profile State
-  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [editFormData, setEditFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    role: 'spv_logistik' as UserRole,
-    department: '',
-    status: 'approved' as UserApprovalStatus,
-    notes: '',
-    approvedBy: ''
-  });
-  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
-
-  // New user form state
-  const [newUser, setNewUser] = useState({
-    fullName: '',
-    email: '',
-    password: ''
-  });
+  useEffect(() => {
+    const updateReports = () => {
+      try {
+        const reps = driverReportService.getReports();
+        setPendingReportsCount(reps.filter(r => r.status === 'pending').length);
+      } catch {}
+    };
+    updateReports();
+    window.addEventListener('driver-report-updated', updateReports);
+    return () => window.removeEventListener('driver-report-updated', updateReports);
+  }, []);
 
   useEffect(() => {
     return logisticsStore.subscribe(() => {
-      const freshUsers = logisticsStore.getUsers();
-      setUsers(freshUsers);
       setCurrentUser(logisticsStore.getCurrentUser());
-      if (!selectedUserId && freshUsers.length > 0) {
-        setSelectedUserId(freshUsers[0].id);
-      }
+      setPendingUsersCount(logisticsStore.getPendingUsersCount());
     });
-  }, [selectedUserId]);
+  }, []);
 
-  // Whenever selectedUser changes, initialize editingPermissions
   useEffect(() => {
-    if (selectedUser) {
-      const initialPerms: UserPermissions['modules'] = {};
-      MODULE_DEFINITIONS.forEach(mod => {
-        const userMod = selectedUser.permissions?.modules?.[mod.id];
-        const subMenuPerms: Record<string, 'read_only' | 'full_access' | 'none'> = {};
-        mod.subMenus.forEach(sub => {
-          subMenuPerms[sub.id] = userMod?.subMenus?.[sub.id] || (selectedUser.role === 'super_admin' ? 'full_access' : 'read_only');
-        });
-        initialPerms[mod.id] = {
-          enabled: userMod ? userMod.enabled : (selectedUser.role === 'super_admin' || selectedUser.role === 'spv_logistik'),
-          subMenus: subMenuPerms
-        };
-      });
-      setEditingPermissions(initialPerms);
-    }
-  }, [selectedUser?.id]);
-
-  const ROLE_LABELS: Record<UserRole, string> = {
-    super_admin: 'Super Admin / Manager',
-    spv_logistik: 'SPV Logistik',
-    operasional: 'Operasional',
-    security: 'Security / Keamanan',
-    sales_admin: 'Adm. Penjualan',
-    purchasing_admin: 'Adm. Pembelian',
-    hr_admin: 'HR Admin',
-    finance_tax_admin: 'Finance & Tax',
-    warehouse_admin: 'Gudang',
-    driver: 'Kru Supir / Driver',
-    marketing_online: 'Marketing Online',
-    marketing_offline: 'Marketing Offline',
-    crew_helper: 'Kru Helper'
-  };
-
-  const toggleModuleExpansion = (modId: string) => {
-    setExpandedModules(prev => ({ ...prev, [modId]: !prev[modId] }));
-  };
-
-  const handleToggleModuleEnabled = (modId: string, enabled: boolean) => {
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Hanya Super Admin yang berwenang mengubah hak akses modul.', 'warning');
-      return;
-    }
-    setEditingPermissions(prev => ({
-      ...prev,
-      [modId]: {
-        ...(prev[modId] || { subMenus: {} }),
-        enabled
-      }
-    }));
-  };
-
-  const handleSubMenuPermissionChange = (modId: string, subId: string, accessLevel: 'none' | 'read_only' | 'full_access') => {
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Hanya Super Admin yang berwenang mengubah hak akses sub-menu.', 'warning');
-      return;
-    }
-    setEditingPermissions(prev => {
-      const mod = prev[modId] || { enabled: true, subMenus: {} };
-      return {
-        ...prev,
-        [modId]: {
-          ...mod,
-          subMenus: {
-            ...mod.subMenus,
-            [subId]: accessLevel
-          }
-        }
-      };
+    return logisticsStore.subscribe(() => {
+      setCurrentUser(logisticsStore.getCurrentUser());
+      setPendingUsersCount(logisticsStore.getPendingUsersCount());
     });
+  }, []);
+
+  const handleTabClick = (tabId: NavTab) => {
+    onSelectTab(tabId);
+    setIsMobileOpen(false);
   };
 
-  const handleSaveAccess = () => {
-    if (!selectedUser) return;
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Hanya Super Admin yang dapat menyimpan perubahan akses.', 'warning');
-      return;
-    }
+  /**
+   * Render Navigation Item with Neon UI Experience V2 Animations
+   * - Neumorphic pressed state on active
+   * - Smooth neon sweep and slide animation on hover
+   * - Glowing vertical neon indicator bar on active item
+   * - Subtle cyber neon icon glow
+   */
+  const renderNavItem = (
+    tab: NavTab,
+    label: string,
+    icon: React.ReactNode,
+    badge?: React.ReactNode
+  ) => {
+    const isActive = currentTab === tab;
 
-    const updatedPermissions: UserPermissions = {
-      modules: editingPermissions
-    };
+    return (
+      <button
+        key={tab}
+        onClick={() => handleTabClick(tab)}
+        title={isMinimized ? label : undefined}
+        className={`group relative w-full flex items-center ${
+          isMinimized ? 'justify-center px-1' : 'justify-between px-3'
+        } py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all duration-200 ease-out select-none ${
+          isActive
+            ? 'neu-pressed bg-gradient-to-r from-amber-500/20 via-cyan-500/10 to-transparent text-amber-300 font-bold border border-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+            : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 hover:translate-x-1 hover:border-cyan-500/30 hover:shadow-[0_0_14px_rgba(6,182,212,0.2)] border border-transparent'
+        }`}
+      >
+        {/* Neon Indicator Vertical Bar (Active Glow V2) */}
+        {isActive && (
+          <span
+            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-gradient-to-b from-amber-400 via-cyan-400 to-emerald-400 shadow-[0_0_10px_rgba(245,158,11,0.9),0_0_18px_rgba(6,182,212,0.7)]"
+            aria-hidden="true"
+          />
+        )}
 
-    const success = logisticsStore.updateUserProfile(selectedUser.id, {
-      permissions: updatedPermissions
-    });
-
-    if (success) {
-      showNotification('Hak Akses Disimpan', `Hak akses dan pembatasan input untuk "${selectedUser.fullName}" berhasil disimpan ke sistem.`, 'success');
-      setSaveSuccessMessage(`Hak akses dan pembatasan input untuk "${selectedUser.fullName}" berhasil disimpan.`);
-      setTimeout(() => setSaveSuccessMessage(null), 4000);
-    }
-  };
-
-  const handleCopyAccess = () => {
-    if (!sourceUserIdForCopy) {
-      showNotification('Peringatan', 'Silakan pilih user sumber untuk menyalin akses.', 'warning');
-      return;
-    }
-    const sourceUser = users.find(u => u.id === sourceUserIdForCopy);
-    if (!sourceUser || !sourceUser.permissions) {
-      showNotification('User Sumber Kosong', 'User sumber tidak memiliki konfigurasi akses khusus.', 'warning');
-      return;
-    }
-    setEditingPermissions(JSON.parse(JSON.stringify(sourceUser.permissions.modules)));
-    setIsCopyModalOpen(false);
-    setSourceUserIdForCopy('');
-    showNotification('Salin Akses Berhasil', `Berhasil menyalin hak akses dari ${sourceUser.fullName}. Klik 'Simpan Akses' di kanan bawah untuk menerapkan ke database.`, 'success');
-  };
-
-  const handleChangePassword = () => {
-    if (!selectedUser) return;
-    if (!newPasswordInput || newPasswordInput.length < 6) {
-      showNotification('Password Tidak Valid', 'Password baru minimal harus 6 karakter.', 'warning');
-      return;
-    }
-    if (newPasswordInput !== confirmPasswordInput) {
-      showNotification('Password Tidak Cocok', 'Konfirmasi password tidak cocok dengan password baru. Harap periksa kembali kedua input.', 'error');
-      return;
-    }
-    const success = logisticsStore.updateUserProfile(selectedUser.id, {
-      password: newPasswordInput
-    });
-    if (success) {
-      showNotification('Password Berhasil Diubah', `Password baru untuk akun "${selectedUser.fullName}" berhasil disimpan ke database.`, 'success');
-      setSaveSuccessMessage(`Password akun "${selectedUser.fullName}" berhasil diubah.`);
-      setTimeout(() => setSaveSuccessMessage(null), 4000);
-      setIsPasswordModalOpen(false);
-      setNewPasswordInput('');
-      setConfirmPasswordInput('');
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
-    }
-  };
-
-  const handleApprove = (userId: string, notes?: string) => {
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Hanya Super Admin yang dapat menyetujui akun pengguna.', 'warning');
-      return;
-    }
-    logisticsStore.approveUser(userId, notes || 'Disetujui oleh ' + currentUser.fullName);
-    showNotification('Akun Disetujui', 'Akun pengguna berhasil disetujui dan kini berstatus aktif.', 'success');
-  };
-
-  const handleDelete = (userId: string) => {
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Hanya Super Admin yang dapat menghapus akun pengguna.', 'warning');
-      return;
-    }
-    
-    setDeleteTargetId(userId);
-    setIsDeleteModalOpen(true);
-  };
-  
-  const confirmDelete = () => {
-    if (!deleteTargetId) return;
-    
-    const target = users.find(u => u.id === deleteTargetId);
-    logisticsStore.deleteUser(deleteTargetId);
-    const remaining = users.filter(u => u.id !== deleteTargetId);
-    if (remaining.length > 0) {
-      setSelectedUserId(remaining[0].id);
-    }
-    
-    setIsDeleteModalOpen(false);
-    setDeleteTargetId(null);
-    showNotification('Akun Dihapus', `Akun ${target?.fullName || 'pengguna'} telah berhasil dihapus dari sistem.`, 'success');
-  };
-
-  const handleOpenEdit = (user: UserProfile) => {
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Fitur edit profil hanya dapat diakses oleh Super Admin.', 'warning');
-      return;
-    }
-    setEditingUser(user);
-    setEditFormData({
-      fullName: user.fullName || '',
-      email: user.email || '',
-      phone: user.phone || '',
-      role: user.role,
-      department: user.department || '',
-      status: user.status,
-      notes: user.notes || '',
-      approvedBy: user.approvedBy || currentUser.fullName
-    });
-  };
-
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUser) return;
-    if (!isSuperAdmin) {
-      showNotification('Akses Ditolak', 'Hanya Super Admin yang berwenang mengubah profil pengguna.', 'warning');
-      return;
-    }
-
-    const success = logisticsStore.updateUserProfile(editingUser.id, {
-      fullName: editFormData.fullName.trim(),
-      email: editFormData.email.trim(),
-      phone: editFormData.phone.trim(),
-      role: editFormData.role,
-      department: editFormData.department.trim(),
-      status: editFormData.status,
-      notes: editFormData.notes.trim(),
-      approvedBy: editFormData.status === 'approved' ? (editFormData.approvedBy || currentUser.fullName) : editingUser.approvedBy
-    });
-
-    if (success) {
-      setSaveSuccessMessage(`Profil "${editFormData.fullName}" berhasil diperbarui.`);
-      setTimeout(() => setSaveSuccessMessage(null), 4000);
-      setEditingUser(null);
-    }
-  };
-
-  const handleCreateUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUser.email) return;
-
-    const created = logisticsStore.registerUser({
-      fullName: newUser.fullName || 'Pengguna Baru',
-      email: newUser.email,
-      phone: '-',
-      role: 'spv_logistik',
-      department: 'Umum',
-      notes: 'Akun dibuat langsung oleh Super Admin AKK'
-    });
-    // Removed automatic approval
-
-    setIsAddUserModalOpen(false);
-    setSelectedUserId(created.id);
-    setNewUser({
-      fullName: '',
-      email: '',
-      password: ''
-    });
-  };
-
-  // Simplified Add User Modal UI (I will update the JSX below to match this)
-
-  const pendingCount = users.filter(u => u.status === 'pending').length;
-  const approvedCount = users.filter(u => u.status === 'approved').length;
-  const rejectedCount = users.filter(u => u.status === 'rejected').length;
-
-  const matchUserDepartment = (u: UserProfile, filterKey: string) => {
-    if (filterKey === 'all') return true;
-    const dept = (u.department || '').toLowerCase();
-    const role = (u.role || '').toLowerCase();
-    switch (filterKey) {
-      case 'logistics':
-        return role === 'spv_logistik' || role === 'driver' || /logistik|pengiriman|distribusi|armada|supir/i.test(dept);
-      case 'sales':
-        return role === 'sales_admin' || /sales|penjualan/i.test(dept);
-      case 'warehouse':
-        return role === 'warehouse_admin' || /gudang|warehouse/i.test(dept);
-      case 'marketing':
-        return role === 'marketing_online' || role === 'marketing_offline' || /marketing|pemasaran/i.test(dept);
-      case 'purchasing':
-        return role === 'purchasing_admin' || /pembelian|purchasing|pengadaan/i.test(dept);
-      case 'finance':
-        return role === 'finance_tax_admin' || /finance|tax|keuangan|pajak/i.test(dept);
-      case 'hr':
-        return role === 'hr_admin' || /hr|human|ga|personalia|general affair/i.test(dept);
-      case 'super_admin':
-        return role === 'super_admin' || /super|direksi|manajemen/i.test(dept);
-      default:
-        return role === filterKey || dept.includes(filterKey.toLowerCase());
-    }
-  };
-
-  const countUsersInDept = (deptId: string) => {
-    if (deptId === 'all') return users.length;
-    return users.filter(u => matchUserDepartment(u, deptId)).length;
-  };
-
-  const filteredUsers = users.filter(u => {
-    const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
-    const matchesDept = matchUserDepartment(u, departmentFilter);
-    const matchesQuery =
-      u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.role.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesDept && matchesQuery;
-  });
-
-  // Auto-select first matching user if current selected user is filtered out
-  useEffect(() => {
-    if (filteredUsers.length > 0) {
-      const isSelectedPresent = filteredUsers.some(u => u.id === selectedUserId);
-      if (!isSelectedPresent) {
-        setSelectedUserId(filteredUsers[0].id);
-      }
-    }
-  }, [departmentFilter, statusFilter, searchQuery]);
-
-  const activeDeptOption = DEPARTMENT_FILTER_OPTIONS.find(opt => opt.id === departmentFilter);
-
-  return (
-    <div className="space-y-6">
-      {/* RBAC Header & Authorization Notice */}
-      <div className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
-        isSuperAdmin
-          ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
-          : 'bg-slate-900 border-slate-800 text-slate-400'
-      }`}>
-        <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-            isSuperAdmin
-              ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-inner'
-              : 'bg-slate-800 border-slate-700 text-slate-500'
-          }`}>
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
-              <span>{isSuperAdmin ? 'Manajemen User & Hak Akses Granular (Super Admin Mode)' : 'Hak Akses Pengguna Terbatas'}</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
-                isSuperAdmin
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}>
-                {isSuperAdmin ? '👑 Super Admin' : '🔒 Read Only'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {isSuperAdmin
-                ? 'Pilih user di daftar sebelah kiri untuk melihat dan mengatur rincian menu, sub-menu, pembatasan input, copy akses, ubah password, dan kelola akun di sebelah kanan.'
-                : `Manajemen user dan perubahan hak akses dikunci khusus untuk Super Admin. Anda login sebagai: ${currentUser.role === 'super_admin' ? 'Super Admin' : currentUser.fullName} (${currentUser.role}).`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Save Success Alert Banner */}
-      {saveSuccessMessage && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs flex items-center justify-between shadow-lg animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span className="font-medium">{saveSuccessMessage}</span>
-          </div>
-          <button
-            onClick={() => setSaveSuccessMessage(null)}
-            className="p-1 text-emerald-400 hover:text-white rounded cursor-pointer"
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className={`shrink-0 transition-all duration-200 ${
+              isActive
+                ? 'text-amber-400 scale-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]'
+                : 'text-slate-400 group-hover:text-cyan-400 group-hover:scale-115 group-hover:rotate-3 group-hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]'
+            }`}
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Top Toolbar: Add User & Search / Filter */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setIsAddUserModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah User Langsung</span>
-          </button>
-
-          {onNavigateToE2E && (
-            <button
-              onClick={onNavigateToE2E}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition cursor-pointer"
-              title="Buka Pusat Pengujian E2E & Simulasi Akun Pengguna"
+            {icon}
+          </span>
+          {!isMinimized && (
+            <span
+              className={`truncate transition-colors duration-200 ${
+                isActive ? 'text-amber-200 font-bold' : 'group-hover:text-cyan-200'
+              }`}
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Pusat Uji E2E &amp; Simulasi Akun</span>
-            </button>
+              {label}
+            </span>
           )}
-
-          {/* Department / Role Filter Dropdown in Top Toolbar */}
-          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs shadow-inner">
-            <Filter className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="text-slate-400 font-semibold text-[11px] hidden sm:inline">Role / Dept:</span>
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="bg-transparent text-amber-300 font-bold text-xs focus:outline-none cursor-pointer pr-1"
-            >
-              {DEPARTMENT_FILTER_OPTIONS.map(opt => (
-                <option key={opt.id} value={opt.id} className="bg-slate-900 text-slate-200 font-medium">
-                  {opt.icon} {opt.label} ({countUsersInDept(opt.id)})
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto">
-          {/* Status Filter Tabs */}
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs overflow-x-auto">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-2.5 py-1.5 rounded-md font-semibold transition cursor-pointer whitespace-nowrap ${
-                statusFilter === 'all' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Semua ({users.length})
-            </button>
-            <button
-              onClick={() => setStatusFilter('pending')}
-              className={`px-2.5 py-1.5 rounded-md font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                statusFilter === 'pending' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span>Pending</span>
-              {pendingCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setStatusFilter('approved')}
-              className={`px-2.5 py-1.5 rounded-md font-semibold transition cursor-pointer whitespace-nowrap ${
-                statusFilter === 'approved' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Aktif ({approvedCount})
-            </button>
-          </div>
+        {!isMinimized && (
+          badge ? (
+            badge
+          ) : isActive ? (
+            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.9)] animate-pulse" />
+          ) : null
+        )}
+      </button>
+    );
+  };
 
-          <div className="relative flex-1 sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Cari nama, email, divisi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ================= SPLIT SCREEN MASTER-DETAIL LAYOUT ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* LEFT COLUMN: User List (List User) */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm flex flex-col max-h-[82vh]">
-          {/* Header */}
-          <div className="p-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="font-bold text-white text-xs flex items-center gap-2">
-              <Users className="w-4 h-4 text-amber-400" />
-              <span>Daftar Pengguna ({filteredUsers.length})</span>
-            </h3>
-            <span className="text-[10px] text-slate-400">Pilih user untuk atur akses</span>
-          </div>
-
-          {/* Quick Filter Pill Ribbon for Roles & Departments */}
-          <div className="p-2.5 bg-slate-950/70 border-b border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5 text-[10px]">
-                <Filter className="w-3 h-3 text-amber-400" />
-                <span>Pilih Departemen / Role:</span>
-              </span>
-              {departmentFilter !== 'all' && (
-                <button
-                  type="button"
-                  onClick={() => setDepartmentFilter('all')}
-                  className="text-amber-400 hover:text-amber-300 font-bold text-[10px] flex items-center gap-1 cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 transition"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Reset Filter</span>
-                </button>
-              )}
+  const renderSidebarContent = () => (
+    <div className="h-full flex flex-col justify-between overflow-y-auto sidebar-neon-v2 bg-slate-900/95 border-r border-slate-800/90 neu-flat selection:bg-amber-500 selection:text-slate-950">
+      {/* Brand Header & User Session Card with Neon V2 Glow */}
+      <div className={`border-b border-slate-800/80 ${isMinimized ? 'p-3 flex flex-col items-center justify-center' : 'p-4'}`}>
+        {isMinimized ? (
+          <div className="flex flex-col items-center gap-2.5 w-full">
+            {/* Centered Monogram Vector Logo with Neon Pulse */}
+            <div
+              onClick={() => handleTabClick('dashboard')}
+              className="cursor-pointer hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+              title="PT Anugrah Kemasan Kreatif - Klik untuk Dashboard Utama"
+            >
+              <AkkLogo size="md" showText={false} />
             </div>
 
-            {/* Horizontally Scrollable Department Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-              {DEPARTMENT_FILTER_OPTIONS.map(opt => {
-                const count = countUsersInDept(opt.id);
-                const isActive = departmentFilter === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setDepartmentFilter(opt.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400 font-extrabold'
-                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700/60'
-                    }`}
-                  >
-                    <span>{opt.icon}</span>
-                    <span>{opt.shortLabel}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
-                      isActive ? 'bg-slate-950 text-amber-300' : 'bg-slate-900 text-slate-400'
-                    }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+            {/* Neon V2 Mini Badge */}
+            <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider text-cyan-300 bg-cyan-950/70 border border-cyan-500/50 shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+              V2
+            </span>
+
+            {/* Maximize Sidebar Toggle Button with Neumorphic Elevation */}
+            {onToggleMinimize && (
+              <button
+                onClick={onToggleMinimize}
+                className="p-1.5 rounded-xl neu-button text-amber-400 hover:text-cyan-300 border border-slate-700/60 shadow-xs hover:scale-110 transition cursor-pointer"
+                title="Perbesar Sidebar (Tampilkan Nama & Menu Lengkap)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Compact User Avatar with Neon Ring */}
+            <div className="relative mt-1">
+              <div
+                onClick={() => onOpenAuth('login')}
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 via-amber-500 to-cyan-500 flex items-center justify-center font-black text-slate-950 text-xs shadow-md cursor-pointer hover:scale-110 hover:shadow-[0_0_12px_rgba(245,158,11,0.8)] transition-all"
+                title={`${currentUser.fullName || 'User'} (${currentUser.role}) - Klik untuk Ganti Akun / Login`}
+              >
+                {currentUser.fullName ? currentUser.fullName.substring(0, 1).toUpperCase() : 'U'}
+              </div>
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-950 shadow-[0_0_6px_currentColor] ${
+                  currentUser.status === 'approved'
+                    ? 'bg-emerald-400 text-emerald-400'
+                    : currentUser.status === 'pending'
+                    ? 'bg-amber-400 text-amber-400 animate-pulse'
+                    : 'bg-rose-400 text-rose-400'
+                }`}
+                title={`Status Akun: ${currentUser.status}`}
+              />
             </div>
-
-            {/* Active Filter Indicator Badge */}
-            {departmentFilter !== 'all' && (
-              <div className="pt-1 flex items-center justify-between text-[11px] text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
-                <span className="flex items-center gap-1.5">
-                  <span>{activeDeptOption?.icon}</span>
-                  <span>Menampilkan filter: <strong>{activeDeptOption?.label}</strong></span>
-                </span>
-                <span className="font-mono text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded font-bold">
-                  {filteredUsers.length} User
-                </span>
-              </div>
-            )}
           </div>
-
-          <div className="overflow-y-auto divide-y divide-slate-800/80 flex-1">
-            {filteredUsers.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs">
-                Tidak ada user yang ditemukan.
-              </div>
-            ) : (
-              filteredUsers.map(user => {
-                const isSelected = selectedUser?.id === user.id;
-                const isCurrent = user.id === currentUser.id;
-
-                return (
-                  <div
-                    key={user.id}
-                    onClick={() => setSelectedUserId(user.id)}
-                    className={`p-3.5 transition cursor-pointer flex items-center justify-between gap-3 ${
-                      isSelected 
-                        ? 'bg-amber-600/15 border-l-4 border-amber-500 text-white' 
-                        : 'hover:bg-slate-800/60 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow ${
-                        isSelected ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-200'
-                      }`}>
-                        {user.role === 'super_admin' ? '👑' : user.fullName.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-xs truncate flex items-center gap-1.5">
-                          <span className={isSelected ? 'text-amber-300 font-extrabold' : 'text-white'}>
-                            {user.role === 'super_admin' ? 'Super Admin' : user.fullName}
-                          </span>
-                          {isCurrent && (
-                            <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-blue-500/25 text-blue-300">
-                              Anda
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                          {ROLE_LABELS[user.role] || user.role}
-                        </div>
-                        <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                          {user.department}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      {user.status === 'approved' && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" title="Aktif" />
-                      )}
-                      {user.status === 'pending' && (
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" title="Pending" />
-                      )}
-                      {user.status === 'rejected' && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500" title="Ditolak" />
-                      )}
-                      <span className="text-[10px] text-slate-400">
-                        {user.status === 'approved' ? 'Aktif' : user.status === 'pending' ? 'Pending' : 'Ditolak'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Selected User Details & Menu/Submenu Granular Access */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm flex flex-col">
-          {selectedUser ? (
-            <>
-              {/* Selected User Header Banner */}
-              <div className="p-4 bg-slate-950 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center text-white font-bold text-base shadow-md">
-                    {selectedUser.role === 'super_admin' ? '👑' : selectedUser.fullName.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-bold text-white">
-                        {selectedUser.role === 'super_admin' ? 'Super Admin' : selectedUser.fullName}
-                      </h3>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                        {ROLE_LABELS[selectedUser.role] || selectedUser.role}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3 text-slate-500" />
-                        {selectedUser.email}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Building className="w-3 h-3 text-slate-500" />
-                        {selectedUser.department}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
-                  {onNavigateToE2E && (
-                    <button
-                      onClick={() => {
-                        logisticsStore.setCurrentUser(selectedUser);
-                        onNavigateToE2E();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/40 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95"
-                      title={`Simulasikan sesi dan uji alur kerja sistem sebagai ${selectedUser.fullName}`}
-                    >
-                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Uji Akun Ini</span>
-                    </button>
-                  )}
-                  {isSuperAdmin && (
-                    <button
-                      onClick={() => handleOpenEdit(selectedUser)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-95"
-                      title={`Edit Data ${selectedUser.fullName} (${ROLE_LABELS[selectedUser.role] || selectedUser.role})`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Edit {selectedUser.fullName}</span>
-                    </button>
-                  )}
-                  {selectedUser.status === 'pending' && isSuperAdmin && (
-                    <button
-                      onClick={() => handleApprove(selectedUser.id)}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow-sm active:scale-95"
-                    >
-                      Setujui Akun
-                    </button>
-                  )}
-                </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between w-full">
+              <div
+                onClick={() => handleTabClick('dashboard')}
+                className="cursor-pointer hover:opacity-95 transition-opacity"
+              >
+                <AkkLogo size="sm" showSubtitle={true} />
               </div>
 
-              {/* Granular Menu & Submenu Permissions Section */}
-              <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto text-xs">
-                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="font-bold text-white flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-amber-400" />
-                      <span>Rincian Menu &amp; Sub-Menu Hak Akses</span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
-                      Centang modul dan sub-menu yang dapat diakses, serta atur pembatasan input data (*Full Akses* vs *Hanya Lihat*).
-                    </div>
-                  </div>
+              {/* Neon UI Experience V2 Badge */}
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-cyan-300 bg-cyan-950/70 border border-cyan-400/60 shadow-[0_0_10px_rgba(6,182,212,0.45)]">
+                  <Zap className="w-2.5 h-2.5 text-cyan-400 animate-pulse" />
+                  <span>NEON V2</span>
+                </span>
+                {onToggleMinimize && (
                   <button
-                    onClick={() => setIsCopyModalOpen(true)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
-                    title="Salin hak akses dari user lain"
+                    onClick={onToggleMinimize}
+                    className="p-1 rounded-lg neu-button text-slate-400 hover:text-amber-400 border border-slate-700/60 transition cursor-pointer"
+                    title="Minimalkan Sidebar (Hanya Ikon Saja)"
                   >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Akses</span>
-                  </button>
-                </div>
-
-                {/* Modules Accordion List */}
-                <div className="space-y-3">
-                  {MODULE_DEFINITIONS.map(mod => {
-                    const modState = editingPermissions[mod.id] || { enabled: true, subMenus: {} };
-                    const isExpanded = expandedModules[mod.id];
-
-                    return (
-                      <div key={mod.id} className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-xs">
-                        <div className="p-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={modState.enabled}
-                              onChange={(e) => handleToggleModuleEnabled(mod.id, e.target.checked)}
-                              disabled={!isSuperAdmin}
-                              className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => toggleModuleExpansion(mod.id)}
-                              className="font-bold text-white flex items-center gap-2 text-left cursor-pointer hover:text-amber-400"
-                            >
-                              <span>{mod.name}</span>
-                              {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
-                            </button>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            modState.enabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-500'
-                          }`}>
-                            {modState.enabled ? 'Aktif' : 'Nonaktif'}
-                          </span>
-                        </div>
-
-                        {isExpanded && modState.enabled && (
-                          <div className="p-3 divide-y divide-slate-800/60 space-y-2">
-                            {mod.subMenus.map(sub => {
-                              const accessLevel = modState.subMenus[sub.id] || 'read_only';
-                              const isSubActive = accessLevel !== 'none';
-
-                              return (
-                                <div key={sub.id} className="pt-2 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2.5">
-                                    <input
-                                      type="checkbox"
-                                      checked={isSubActive}
-                                      onChange={(e) => handleSubMenuPermissionChange(
-                                        mod.id, 
-                                        sub.id, 
-                                        e.target.checked ? 'full_access' : 'none'
-                                      )}
-                                      disabled={!isSuperAdmin}
-                                      className="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-amber-500 cursor-pointer"
-                                    />
-                                    <span className={isSubActive ? 'text-slate-200 font-medium' : 'text-slate-500 line-through'}>
-                                      {sub.name}
-                                    </span>
-                                  </div>
-
-                                  {isSubActive && (
-                                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                                      <span className="text-[10px] text-slate-400">Akses Input:</span>
-                                      <select
-                                        value={accessLevel}
-                                        onChange={(e) => handleSubMenuPermissionChange(mod.id, sub.id, e.target.value as any)}
-                                        disabled={!isSuperAdmin}
-                                        className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white font-medium focus:outline-none focus:border-amber-500 cursor-pointer"
-                                      >
-                                        <option value="full_access">🟢 Full Akses (Bisa Input/Edit)</option>
-                                        <option value="read_only">🟡 Hanya Lihat (Read Only)</option>
-                                        <option value="none">🔴 Tidak Ada Akses</option>
-                                      </select>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bottom Right Actions Footer (Copy Akses, Ubah Password, Simpan Akses, Hapus) */}
-              <div className="p-4 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {isSuperAdmin && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setIsPasswordModalOpen(true)}
-                        className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold flex items-center gap-1.5 transition cursor-pointer border border-slate-700 text-xs shadow-xs"
-                        title="Ubah password akun apabila user lupa password"
-                      >
-                        <Key className="w-4 h-4 text-amber-400" />
-                        <span>Ubah Password</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(selectedUser.id)}
-                        className="px-3.5 py-2 rounded-xl bg-rose-950/50 hover:bg-rose-900 text-rose-300 font-bold flex items-center gap-1.5 transition cursor-pointer border border-rose-950 text-xs shadow-xs"
-                        title="Hapus akun dari sistem"
-                      >
-                        <XCircle className="w-4 h-4 text-rose-400" />
-                        <span>Hapus Akun</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {isSuperAdmin && (
-                  <button
-                    type="button"
-                    onClick={handleSaveAccess}
-                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition cursor-pointer active:scale-95 text-xs self-end sm:self-auto"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Simpan Akses</span>
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
-            </>
-          ) : (
-            <div className="p-12 text-center text-slate-500 text-xs">
-              Pilih pengguna di sebelah kiri untuk melihat rincian hak akses.
             </div>
-          )}
-        </div>
 
-      </div>
-
-      {/* ================= COPY ACCESS SUB-MODAL ================= */}
-      {isCopyModalOpen && (
-        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-            <h4 className="font-bold text-white text-sm flex items-center gap-2">
-              <Copy className="w-4 h-4 text-amber-400" />
-              <span>Salin Akses dari User Lain</span>
-            </h4>
-            <p className="text-xs text-slate-400">
-              Pilih akun pengguna sumber untuk menyalin seluruh konfigurasi hak akses modul dan sub-menu ke user saat ini ({selectedUser?.fullName}).
-            </p>
-            <select
-              value={sourceUserIdForCopy}
-              onChange={(e) => setSourceUserIdForCopy(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white"
-            >
-              <option value="">-- Pilih User Sumber --</option>
-              {users.filter(u => u.id !== selectedUser?.id).map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.fullName} ({ROLE_LABELS[u.role] || u.role})
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setIsCopyModalOpen(false)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-semibold text-xs"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleCopyAccess}
-                className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs"
-              >
-                Terapkan Salin Akses
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= CHANGE PASSWORD SUB-MODAL ================= */}
-      {isPasswordModalOpen && (
-        <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-400" />
-                <span>Ubah Password Akun: {selectedUser?.fullName}</span>
-              </h4>
-              <button
-                onClick={() => { setIsPasswordModalOpen(false); setNewPasswordInput(''); setConfirmPasswordInput(''); }}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">
-              Masukkan password baru untuk akun ini (digunakan apabila user lupa password).
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-[11px] font-bold text-slate-300 block mb-1">
-                  Password Baru <span className="text-rose-400">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? 'text' : 'password'}
-                    placeholder="Minimal 6 karakter"
-                    value={newPasswordInput}
-                    onChange={(e) => setNewPasswordInput(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white pr-9 focus:outline-none focus:border-amber-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                    title={showNewPassword ? 'Sembunyikan password' : 'Lihat password'}
-                  >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            {/* User Session Profile Card in Neumorphic Style */}
+            <div className="mt-3 p-3 rounded-2xl neu-flat-sm border border-slate-800/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="relative shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 via-amber-500 to-cyan-500 flex items-center justify-center font-black text-slate-950 text-xs shadow-md">
+                      {currentUser.fullName ? currentUser.fullName.substring(0, 1).toUpperCase() : 'U'}
+                    </div>
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 shadow-[0_0_6px_currentColor] ${
+                        currentUser.status === 'approved'
+                          ? 'bg-emerald-400 text-emerald-400'
+                          : currentUser.status === 'pending'
+                          ? 'bg-amber-400 text-amber-400 animate-pulse'
+                          : 'bg-rose-400 text-rose-400'
+                      }`}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                      {currentUser.fullName}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate">
+                      {currentUser.role === 'super_admin' && '👑 Super Admin / Mgr'}
+                      {currentUser.role === 'spv_logistik' && '🚛 Dispatcher Logistik'}
+                      {currentUser.role === 'driver' && '🚚 Kru Supir Utama'}
+                      {currentUser.role === 'sales_admin' && '💼 Admin Penjualan'}
+                      {currentUser.role === 'purchasing_admin' && '🛒 Admin Pembelian'}
+                      {currentUser.role === 'hr_admin' && '👥 HR Admin'}
+                      {currentUser.role === 'finance_tax_admin' && '💰 Finance & Tax Admin'}
+                      {currentUser.role === 'warehouse_admin' && '📦 Admin Gudang'}
+                      {currentUser.role === 'marketing_online' && '🌐 Marketing Online'}
+                      {currentUser.role === 'marketing_offline' && '📣 Marketing Offline'}
+                      {currentUser.role === 'crew_helper' && '🤝 Kru Helper'}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-slate-300 block mb-1">
-                  Konfirmasi Password Baru <span className="text-rose-400">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="Ketik ulang password baru"
-                    value={confirmPasswordInput}
-                    onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                    className={`w-full bg-slate-950 border rounded-xl px-3 py-2.5 text-xs text-white pr-9 focus:outline-none ${
-                      confirmPasswordInput && newPasswordInput !== confirmPasswordInput
-                        ? 'border-rose-500/70 focus:border-rose-500'
-                        : confirmPasswordInput && newPasswordInput === confirmPasswordInput
-                        ? 'border-emerald-500/70 focus:border-emerald-500'
-                        : 'border-slate-800 focus:border-amber-500'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                    title={showConfirmPassword ? 'Sembunyikan password' : 'Lihat password'}
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Real-time mismatch detection */}
-              {confirmPasswordInput.length > 0 && (
-                <div className="text-[11px] flex items-center gap-1.5 pt-0.5">
-                  {newPasswordInput !== confirmPasswordInput ? (
-                    <span className="text-rose-400 flex items-center gap-1 font-semibold">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                      <span>Password konfirmasi tidak cocok!</span>
+                {/* Approval Badge with Neon Pill */}
+                <div>
+                  {currentUser.status === 'approved' ? (
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                      Approved
+                    </span>
+                  ) : currentUser.status === 'pending' ? (
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.4)] animate-pulse">
+                      Pending
                     </span>
                   ) : (
-                    <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Password cocok dan terkonfirmasi.</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                      Ditolak
                     </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                <button
+                  onClick={() => onOpenAuth('login')}
+                  className="text-amber-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <LogIn className="w-3 h-3" />
+                  <span>Ganti Akun / Login</span>
+                </button>
+                <button
+                  onClick={() => onOpenAuth('register')}
+                  className="text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                >
+                  Daftar Baru
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Structured Navigation Menu */}
+      <nav className={`${isMinimized ? 'p-2 space-y-2' : 'p-3 space-y-4'} flex-1 overflow-x-hidden`}>
+        {/* ============================================================ */}
+        {/* MENU UTAMA PALING ATAS: DASHBOARD                            */}
+        {/* ============================================================ */}
+        {canAccess(currentUser, 'dashboard') && (
+          <div className="space-y-1 pb-2 border-b border-slate-800/70">
+            {!isMinimized && (
+              <div className="flex items-center justify-between px-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5 neon-text-amber">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Dashboard Utama</span>
+                </span>
+                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.25)]">
+                  Rangkuman
+                </span>
+              </div>
+            )}
+
+            {renderNavItem(
+              'dashboard',
+              'Dashboard Eksekutif',
+              <LayoutDashboard className="w-4 h-4" />,
+              !isMinimized ? (
+                <span
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                    currentTab === 'dashboard'
+                      ? 'bg-slate-950/60 text-amber-300 font-black border border-amber-400/50'
+                      : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                  }`}
+                >
+                  Ops + Sales
+                </span>
+              ) : undefined
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* BAGIAN 1: LOGISTIK & PENGIRIMAN                             */}
+        {/* ============================================================ */}
+        {(() => {
+          const canLogisticsPortal = canAccess(currentUser, 'logistics', 'portal_driver');
+          const canLogisticsReports = canAccess(currentUser, 'logistics', 'monitoring_sla');
+          const canLogisticsOps = canAccess(currentUser, 'logistics', 'dashboard_logistik');
+          const canLogisticsSched = canAccess(currentUser, 'logistics', 'rencana_rute');
+          const canLogisticsFleets = canAccess(currentUser, 'logistics', 'armada_ceklis');
+          const canLogisticsTrack = canAccess(currentUser, 'logistics', 'live_map');
+          const hasLogistics = canLogisticsPortal || canLogisticsReports || canLogisticsOps || canLogisticsSched || canLogisticsFleets || canLogisticsTrack;
+
+          if (!hasLogistics) return null;
+
+          return (
+            <div className="space-y-1">
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="Logistik & Pengiriman">
+                  <div className="w-6 h-px bg-slate-800" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsLogistikOpen(!isLogistikOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-cyan-300 transition cursor-pointer text-left w-full"
+                  >
+                    <Truck className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Logistik & Pengiriman</span>
+                    <span className="ml-auto text-slate-500 flex items-center gap-1.5">
+                      {isLogistikOpen ? (
+                        <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200 text-cyan-400" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200" />
+                      )}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {(!isMinimized ? isLogistikOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-cyan-500/30 ml-2.5 my-1 shadow-[0_0_8px_rgba(6,182,212,0.15)]' : ''}`}>
+                  {canLogisticsPortal && renderNavItem(
+                    'driver_portal',
+                    'Portal Driver Mobile',
+                    <Smartphone className="w-4 h-4 text-emerald-400" />,
+                    <span className="text-[9px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                      Mobile View
+                    </span>
+                  )}
+                  {canLogisticsReports && renderNavItem(
+                    'driver_reports',
+                    'Laporan Kiriman Kru',
+                    <MapPin className="w-4 h-4 text-rose-400" />,
+                    pendingReportsCount > 0 ? (
+                      <span className="text-[9px] font-bold bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse">
+                        {pendingReportsCount} Baru
+                      </span>
+                    ) : undefined
+                  )}
+                  {canLogisticsOps && renderNavItem('operational_dashboard', 'Dashboard Operasional', <Truck className="w-4 h-4" />)}
+                  {canLogisticsOps && renderNavItem('analytics_reports', 'Analitik Armada & Kru', <BarChart3 className="w-4 h-4 text-amber-400" />)}
+                  {canLogisticsSched && renderNavItem('schedules', 'Jadwal & Penugasan', <Calendar className="w-4 h-4" />)}
+                  {canLogisticsFleets && renderNavItem('fleets', 'Armada & Kru Supir', <Truck className="w-4 h-4" />)}
+                  {canLogisticsFleets && renderNavItem('fuel_efficiency', 'Efisiensi BBM', <Fuel className="w-4 h-4" />)}
+                  {canLogisticsFleets && renderNavItem('spareparts', 'Manajemen Sparepart', <Wrench className="w-4 h-4" />)}
+                  {canLogisticsFleets && renderNavItem('crew_history', 'Histori & Otorisasi Kru', <History className="w-4 h-4" />)}
+                  {canLogisticsReports && renderNavItem('tracking_eval', 'Evaluasi Jalur (Excel)', <FileSpreadsheet className="w-4 h-4" />)}
+                  {canLogisticsTrack && renderNavItem('tracksolid', 'Akses Tracksolid GPS', <Radio className="w-4 h-4" />)}
+                  {canLogisticsFleets && renderNavItem('fleet_forms', 'Formulir Armada', <FileText className="w-4 h-4" />)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ============================================================ */}
+        {/* BAGIAN 2: ADMIN PENJUALAN                                   */}
+        {/* ============================================================ */}
+        {(() => {
+          const canSalesDash = canAccess(currentUser, 'sales_admin', 'dashboard_penjualan');
+          const canSalesActs = canAccess(currentUser, 'sales_admin', 'aktivitas_harian');
+          const canSalesSched = canAccess(currentUser, 'sales_admin', 'jadwal_admin');
+          const canSalesDur = canAccess(currentUser, 'sales_admin', 'durasi_muat');
+          const canSalesMat = canAccess(currentUser, 'sales_admin', 'matriks_skil');
+          const canSalesJob = canAccess(currentUser, 'sales_admin', 'pengaturan_sop');
+          const canSalesKpi = canAccess(currentUser, 'sales_admin', 'data_kpi');
+          const hasSales = canSalesDash || canSalesActs || canSalesSched || canSalesDur || canSalesMat || canSalesJob || canSalesKpi;
+
+          if (!hasSales) return null;
+
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="Admin Penjualan">
+                  <div className="w-6 h-px bg-slate-800" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsSalesAdminOpen(!isSalesAdminOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-amber-400 transition cursor-pointer text-left w-full"
+                  >
+                    <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Admin Penjualan</span>
+                    <span className="ml-auto text-slate-500 flex items-center gap-1.5">
+                      {isSalesAdminOpen ? (
+                        <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200 text-amber-400" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200" />
+                      )}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {(!isMinimized ? isSalesAdminOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-amber-500/30 ml-2.5 my-1 shadow-[0_0_8px_rgba(245,158,11,0.15)]' : ''}`}>
+                  {canSalesDash && renderNavItem('sales_dashboard', 'Dashboard Penjualan', <ShoppingBag className="w-4 h-4" />)}
+                  {canSalesActs && renderNavItem('sales_activities', 'Aktivitas Harian Admin', <Activity className="w-4 h-4" />)}
+                  {canSalesSched && renderNavItem('sales_schedules', 'Jadwal Admin & Produksi', <Calendar className="w-4 h-4" />)}
+                  {canSalesDur && renderNavItem('sales_loading_duration', 'Durasi Muat Admin', <Timer className="w-4 h-4" />)}
+                  {canSalesMat && renderNavItem('sales_skill_matrix', 'Matriks Skill Admin', <Award className="w-4 h-4" />)}
+                  {canSalesJob && renderNavItem('sales_jobdesk', 'Pengaturan SOP & Jobdesk', <Settings className="w-4 h-4" />)}
+
+                  {canSalesKpi && (
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => setIsKpiDropdownOpen(!isKpiDropdownOpen)}
+                        className={`group w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                          isKpiActive
+                            ? 'neu-pressed bg-amber-500/15 text-amber-300 font-bold border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                            : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/50 hover:translate-x-1 border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Sparkles className={`w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-115 ${isKpiActive ? 'text-amber-400' : 'text-slate-400 group-hover:text-amber-300'}`} />
+                          <span className="truncate">Data KPI Penjualan</span>
+                        </div>
+                        {isKpiDropdownOpen ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </button>
+
+                      {isKpiDropdownOpen && (
+                        <div className="space-y-1 pl-3 border-l-2 border-amber-500/25 ml-3 my-1">
+                          {renderNavItem('sales_kpi_individual', '1. KPI Individu Staf', <User className="w-3.5 h-3.5" />)}
+                          {renderNavItem('sales_kpi_fines', '2. Akumulasi Denda', <ShieldAlert className="w-3.5 h-3.5" />)}
+                          {renderNavItem('sales_kpi_nusantara', '3. Persentase Kiriman', <Percent className="w-3.5 h-3.5" />)}
+                          {renderNavItem('sales_kpi_omset', '4. Omset Admin Penjualan', <TrendingUp className="w-3.5 h-3.5" />)}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
             </div>
+          );
+        })()}
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => { setIsPasswordModalOpen(false); setNewPasswordInput(''); setConfirmPasswordInput(''); }}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleChangePassword}
-                disabled={!newPasswordInput || newPasswordInput.length < 6 || newPasswordInput !== confirmPasswordInput}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold text-xs transition cursor-pointer shadow-md shadow-amber-500/20 active:scale-95 disabled:cursor-not-allowed"
-              >
-                Simpan Password Baru
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* ============================================================ */}
+        {/* BAGIAN 3: GUDANG                                            */}
+        {/* ============================================================ */}
+        {(() => {
+          const canWh = canAccess(currentUser, 'warehouse', 'stok_barang') || canAccess(currentUser, 'warehouse', 'permintaan_barang') || canAccess(currentUser, 'warehouse', 'opname_stok') || canAccess(currentUser, 'warehouse', 'ceklis_muat');
+          if (!canWh) return null;
 
-      {/* Manual Add User Modal */}
-      {isAddUserModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <User className="w-4 h-4 text-amber-400" />
-                Tambah Pengguna Baru AKK
-              </h3>
-              <button
-                onClick={() => setIsAddUserModalOpen(false)}
-                className="text-slate-400 hover:text-white font-bold"
-              >
-                &times;
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">Nama Lengkap</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nama Lengkap User"
-                  value={newUser.fullName}
-                  onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Email / Username</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="nama@gmail.com atau username"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="********"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddUserModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold shadow"
-                >
-                  Simpan &amp; Setujui
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit User Profile Modal (Khusus Super Admin) */}
-      {editingUser && isSuperAdmin && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl space-y-0">
-            <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                  <UserCog className="w-4 h-4" />
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="Gudang">
+                  <div className="w-6 h-px bg-slate-800" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                    <span>Edit Pengguna: {editingUser.fullName}</span>
-                    <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      {ROLE_LABELS[editingUser.role] || editingUser.role}
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-cyan-300 transition cursor-pointer text-left w-full"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Gudang</span>
+                    <span className="ml-auto">
+                      {isWarehouseOpen ? <ChevronDown className="w-3.5 h-3.5 text-cyan-400" /> : <ChevronRight className="w-3.5 h-3.5" />}
                     </span>
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Perbarui data akun <strong className="text-slate-200">{editingUser.fullName}</strong> &bull; ID: <code className="text-amber-400 font-mono">{editingUser.id}</code>
-                  </p>
+                  </button>
                 </div>
-              </div>
-              <button
-                onClick={() => setEditingUser(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              )}
+
+              {(!isMinimized ? isWarehouseOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-cyan-500/30 ml-2.5 my-1' : ''}`}>
+                  {renderNavItem('warehouse_dashboard', 'Dashboard Gudang', <Building2 className="w-4 h-4" />)}
+                </div>
+              )}
             </div>
+          );
+        })()}
 
-            <form onSubmit={handleSaveEdit} className="p-5 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Nama Lengkap &amp; Gelar</span>
-                    <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.fullName}
-                    onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                  />
+        {/* ============================================================ */}
+        {/* BAGIAN 4: MARKETING                                         */}
+        {/* ============================================================ */}
+        {(() => {
+          const canMkt = canAccess(currentUser, 'marketing', 'kampanye') || canAccess(currentUser, 'marketing', 'leads_pipeline') || canAccess(currentUser, 'marketing', 'laporan_kunjungan');
+          if (!canMkt) return null;
+
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="Marketing">
+                  <div className="w-6 h-px bg-slate-800" />
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Email Akun</span>
-                    <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={editFormData.email}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>No. WhatsApp</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Hak Akses (Role)</span>
-                    <span className="text-rose-400">*</span>
-                  </label>
-                  <select
-                    value={editFormData.role}
-                    onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as UserRole })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsMarketingOpen(!isMarketingOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-emerald-400 transition cursor-pointer text-left w-full"
                   >
-                    <option value="super_admin">👑 Super Admin / Manager</option>
-                    <option value="spv_logistik">🚛 SPV Logistik</option>
-                    <option value="operasional">📋 Operasional (Operational Lead)</option>
-                    <option value="security">🛡️ Security (Pos Satpam &amp; Keamanan)</option>
-                    <option value="driver">🚚 Kru Supir / Driver</option>
-                    <option value="crew_helper">🤝 Kru Helper / Kernet</option>
-                    <option value="sales_admin">💼 Adm. Penjualan</option>
-                    <option value="purchasing_admin">🛒 Adm. Pembelian</option>
-                    <option value="hr_admin">👥 HR Admin</option>
-                    <option value="finance_tax_admin">💰 Finance &amp; Tax</option>
-                    <option value="warehouse_admin">📦 Gudang</option>
-                    <option value="marketing_online">🌐 Marketing Online</option>
-                    <option value="marketing_offline">📣 Marketing Offline</option>
-                  </select>
+                    <Megaphone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Marketing</span>
+                    <span className="ml-auto">
+                      {isMarketingOpen ? <ChevronDown className="w-3.5 h-3.5 text-emerald-400" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </span>
+                  </button>
                 </div>
+              )}
 
-                <div className="space-y-1.5">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Status Akun</span>
-                  </label>
-                  <select
-                    value={editFormData.status}
-                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as UserApprovalStatus })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-amber-500"
+              {(!isMinimized ? isMarketingOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-emerald-500/30 ml-2.5 my-1' : ''}`}>
+                  {canAccess(currentUser, 'marketing', 'kampanye') && renderNavItem('marketing_online', 'Marketing Online', <Globe className="w-4 h-4" />)}
+                  {canAccess(currentUser, 'marketing', 'leads_pipeline') && renderNavItem('marketing_offline', 'Marketing Offline', <Megaphone className="w-4 h-4" />)}
+                  {canAccess(currentUser, 'marketing', 'laporan_kunjungan') && renderNavItem('customer_map', 'Jaringan Toko & Mitra', <MapPin className="w-4 h-4" />)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ============================================================ */}
+        {/* BAGIAN 5: ADMIN PEMBELIAN (PURCHASING)                      */}
+        {/* ============================================================ */}
+        {(() => {
+          const canPur = canAccess(currentUser, 'purchasing', 'permintaan_pembelian') || canAccess(currentUser, 'purchasing', 'po_vendor') || canAccess(currentUser, 'purchasing', 'evaluasi_harga');
+          if (!canPur) return null;
+
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="Admin Pembelian">
+                  <div className="w-6 h-px bg-slate-800" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsPurchasingOpen(!isPurchasingOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-purple-400 transition cursor-pointer text-left w-full"
                   >
-                    <option value="approved">Aktif / Disetujui (Approved)</option>
-                    <option value="pending">Menunggu Approval (Pending)</option>
-                    <option value="rejected">Ditolak / Dibekukan (Rejected)</option>
-                  </select>
+                    <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Admin Pembelian</span>
+                    <span className="ml-auto">
+                      {isPurchasingOpen ? <ChevronDown className="w-3.5 h-3.5 text-purple-400" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </span>
+                  </button>
                 </div>
+              )}
 
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Building className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Departemen / Divisi</span>
-                    <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.department}
-                    onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                  />
+              {(!isMinimized ? isPurchasingOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-purple-500/30 ml-2.5 my-1' : ''}`}>
+                  {canAccess(currentUser, 'purchasing', 'permintaan_pembelian') && renderNavItem('purchasing_dashboard', 'Dashboard Pembelian', <ShoppingBag className="w-4 h-4" />)}
+
+                  {canAccess(currentUser, 'purchasing', 'po_vendor') && (
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => setIsPurchasingStockOpen(!isPurchasingStockOpen)}
+                        className={`group w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                          currentTab === 'purchasing_stock_overview' || currentTab === 'purchasing_stock_forecast'
+                            ? 'neu-pressed bg-purple-500/15 text-purple-300 font-bold border border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                            : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800/40 hover:translate-x-1 border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Layers className={`w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-115 ${currentTab === 'purchasing_stock_overview' || currentTab === 'purchasing_stock_forecast' ? 'text-purple-400' : 'text-slate-400'}`} />
+                          <span className="truncate">Analisa Stok</span>
+                        </div>
+                        {isPurchasingStockOpen ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-purple-400" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </button>
+
+                      {isPurchasingStockOpen && (
+                        <div className="space-y-1 pl-3 border-l-2 border-purple-500/25 ml-3 my-1">
+                          {renderNavItem('purchasing_stock_overview', 'Ringkasan Stok', <Database className="w-3.5 h-3.5" />)}
+                          {renderNavItem('purchasing_stock_forecast', 'Prediksi Kebutuhan', <TrendingUp className="w-3.5 h-3.5" />)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
+            </div>
+          );
+        })()}
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition cursor-pointer active:scale-95"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Simpan Perubahan</span>
-                </button>
+        {/* ============================================================ */}
+        {/* BAGIAN 6: FINANCE & TAX                                      */}
+        {/* ============================================================ */}
+        {(() => {
+          const canFin = canAccess(currentUser, 'finance_tax', 'kas_bank') || canAccess(currentUser, 'finance_tax', 'faktur_pajak') || canAccess(currentUser, 'finance_tax', 'rekonsiliasi') || canAccess(currentUser, 'finance_tax', 'laba_rugi');
+          if (!canFin) return null;
+
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="Finance & Tax">
+                  <div className="w-6 h-px bg-slate-800" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsFinanceOpen(!isFinanceOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-amber-400 transition cursor-pointer text-left w-full"
+                  >
+                    <Database className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Finance & Tax</span>
+                    <span className="ml-auto">
+                      {isFinanceOpen ? <ChevronDown className="w-3.5 h-3.5 text-amber-400" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {(!isMinimized ? isFinanceOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-amber-500/30 ml-2.5 my-1' : ''}`}>
+                  {renderNavItem('finance_dashboard', 'Dashboard Finance', <Database className="w-4 h-4" />)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ============================================================ */}
+        {/* BAGIAN 7: HR                                                */}
+        {/* ============================================================ */}
+        {(() => {
+          const canHr = canAccess(currentUser, 'hr', 'hr_data_karyawan') || canAccess(currentUser, 'hr', 'hr_gaji_kpi') || canAccess(currentUser, 'hr', 'ga_security') || canAccess(currentUser, 'hr', 'ga_hk') || canAccess(currentUser, 'hr', 'ga_aset') || canAccess(currentUser, 'hr', 'td_video_training') || canAccess(currentUser, 'hr', 'td_training_karyawan');
+          if (!canHr) return null;
+
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {isMinimized ? (
+                <div className="pt-2 pb-1 flex justify-center" title="HR">
+                  <div className="w-6 h-px bg-slate-800" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <button
+                    onClick={() => setIsHrOpen(!isHrOpen)}
+                    className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-indigo-400 transition cursor-pointer text-left w-full"
+                  >
+                    <Users className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Human Resources</span>
+                    <span className="ml-auto">
+                      {isHrOpen ? <ChevronDown className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {(!isMinimized ? isHrOpen : true) && (
+                <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-indigo-500/30 ml-2.5 my-1' : ''}`}>
+                  {canAccess(currentUser, 'hr', 'hr_data_karyawan') && (
+                    <>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-indigo-300/80 px-2 pt-1">
+                        1. HR
+                      </div>
+                      {renderNavItem('hr_dashboard', 'Dashboard & Presensi', <Users className="w-4 h-4" />)}
+                    </>
+                  )}
+
+                  {canAccess(currentUser, 'hr', 'ga_security') && (
+                    <>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-indigo-300/80 px-2 pt-2 border-t border-slate-800/50">
+                        2. General Affair (GA)
+                      </div>
+                      {renderNavItem('ga_security', 'Security (Keamanan)', <ShieldAlert className="w-4 h-4" />)}
+                      {renderNavItem('ga_hk', 'HK (Housekeeping)', <Brush className="w-4 h-4" />)}
+                      {renderNavItem('ga_aset', 'Aset (Inventaris Pabrik)', <Building2 className="w-4 h-4" />)}
+                    </>
+                  )}
+
+                  {canAccess(currentUser, 'hr', 'td_video_training') && (
+                    <>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-indigo-300/80 px-2 pt-2 border-t border-slate-800/50">
+                        3. Training &amp; Dev
+                      </div>
+                      {renderNavItem('training_videos', 'Video Training SOP', <Video className="w-4 h-4" />)}
+                      {renderNavItem('training_karyawan', 'Training Karyawan', <Award className="w-4 h-4" />)}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ============================================================ */}
+        {/* BAGIAN 8: PENGGUNA & ARSITEKTUR                              */}
+        {/* ============================================================ */}
+        {(() => {
+          const canSysLog = canAccess(currentUser, 'sistem_pengguna', 'log_aktivitas_sistem');
+          const canSysUsers = canAccess(currentUser, 'sistem_pengguna', 'daftar_pengguna') || canAccess(currentUser, 'sistem_pengguna', 'persetujuan_akun');
+          const canSysArch = canAccess(currentUser, 'sistem_pengguna', 'manajemen_hak_akses');
+          const hasSys = canSysLog || canSysUsers || canSysArch;
+
+          if (!hasSys) return null;
+
+          return (
+            <div className={`space-y-1 ${!isMinimized ? 'pt-2 border-t border-slate-800/60' : ''}`}>
+              {!isMinimized && (
+                <div className="px-2 mb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Sistem & Pengguna</span>
+                </div>
+              )}
+
+              <div className={`space-y-1 ${!isMinimized ? 'pl-2 border-l-2 border-indigo-500/30 ml-2.5 my-1' : ''}`}>
+                {canSysLog && renderNavItem('activity_log', 'Log Aktivitas Sistem', <History className="w-4 h-4" />)}
+                {canSysUsers && renderNavItem(
+                  'users',
+                  'Manajemen User & Approval',
+                  <Users className="w-4 h-4" />,
+                  pendingUsersCount > 0 ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse">
+                      {pendingReportsCount}
+                    </span>
+                  ) : undefined
+                )}
+                {canSysUsers && renderNavItem('e2e_testing', 'Pengujian E2E & Simulasi', <ShieldCheck className="w-4 h-4 text-emerald-400" />)}
+                {canSysArch && renderNavItem('architecture', 'Skema SQL Supabase', <Database className="w-4 h-4" />)}
               </div>
-            </form>
-          </div>
+            </div>
+          );
+        })()}
+      </nav>
+
+      {/* Sidebar Footer with Tactile Neumorphism and Neon V2 Accents */}
+      {isMinimized ? (
+        <div className="p-2 border-t border-slate-800/80 bg-slate-950/70 neu-pressed-sm flex flex-col items-center gap-2">
+          <ThemeSwitcher variant="icon-only" />
+
+          {/* Unduh APK Android Driver Mobile (Minimized) with Neon Pulse */}
+          <button
+            onClick={() => setIsApkModalOpen(true)}
+            className="p-2 rounded-xl neu-button text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 hover:shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-all cursor-pointer"
+            title="Unduh Berkas APK Android (v1.0.4) untuk Portal Driver & Helper Mobile"
+          >
+            <Smartphone className="w-4 h-4" />
+          </button>
+
+          {/* Keluar Sesi / Logout (Minimized) */}
+          <button
+            onClick={() => {
+              logisticsStore.logoutUser();
+              onOpenAuth('login');
+            }}
+            className="p-2 rounded-xl neu-button text-slate-400 hover:text-rose-400 hover:border-rose-500/50 hover:shadow-[0_0_12px_rgba(244,63,94,0.4)] transition-all cursor-pointer"
+            title="Keluar Sesi (Logout)"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+
+          {onToggleMinimize && (
+            <button
+              onClick={onToggleMinimize}
+              className="w-full flex items-center justify-center p-2 rounded-xl neu-button text-amber-400 border border-slate-700/60 transition cursor-pointer"
+              title="Perbesar Sidebar"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
-      )}
-      {/* ================= DELETE CONFIRMATION SUB-MODAL ================= */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl neu-flat">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
-              <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
-                <AlertTriangle className="w-5 h-5 text-rose-500" />
-              </div>
-              <div>
-                <h4 className="font-bold text-white text-sm">
-                  Konfirmasi Hapus Akun
-                </h4>
-                <p className="text-[10px] text-slate-400">
-                  Panel Pengguna &bull; PT Anugrah Kemasan Kreatif
-                </p>
-              </div>
+      ) : (
+        <div className="p-4 border-t border-slate-800/80 bg-slate-950/70 neu-pressed-sm space-y-3">
+          {/* DC Status & Neon Clock */}
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-semibold text-slate-300">AKK Banyuwangi DC</span>
             </div>
-
-            {users.find(u => u.id === deleteTargetId) && (
-              <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs">
-                  {users.find(u => u.id === deleteTargetId)?.fullName.substring(0, 2).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-white text-xs truncate">
-                    {users.find(u => u.id === deleteTargetId)?.fullName}
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate">
-                    {users.find(u => u.id === deleteTargetId)?.email} &bull; <span className="text-amber-400">{ROLE_LABELS[users.find(u => u.id === deleteTargetId)?.role || 'spv_logistik']}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Apakah Anda yakin ingin menghapus akun pengguna ini? Tindakan ini bersifat permanen dan seluruh hak akses akun akan dihapus dari sistem.
-            </p>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => { setIsDeleteModalOpen(false); setDeleteTargetId(null); }}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition cursor-pointer"
-              >
-                Tidak, Batal
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/30 transition cursor-pointer active:scale-95"
-              >
-                Ya, Hapus Akun
-              </button>
-            </div>
+            <span className="font-mono text-cyan-400 text-[10px] font-bold tabular-nums neon-text-cyan">
+              {currentTime}
+            </span>
           </div>
-        </div>
-      )}
+
+          {/* Pilihan Tampilan Web (Warna Cerah & Warna Gelap) */}
+          <div className="pt-2.5 border-t border-slate-800/70">
+            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Tampilan Web:</span>
+              </span>
+              <span className="text-[9px] text-cyan-400 font-mono font-bold">Neumorphic</span>
+            </div>
+            <ThemeSwitcher variant="segmented" className="w-full justify-between" />
+          </div>
 
 
-      {/* ================= IN-PAGE POP-UP MODAL NOTIFICATION ================= */}
-      {pageModalNotification && (
-        <div className="fixed inset-0 z-70 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl text-center">
-            <div className="flex flex-col items-center gap-2.5">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                pageModalNotification.type === 'success' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                pageModalNotification.type === 'error' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                pageModalNotification.type === 'warning' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-              }`}>
-                {pageModalNotification.type === 'success' && <CheckCircle2 className="w-6 h-6" />}
-                {pageModalNotification.type === 'error' && <AlertTriangle className="w-6 h-6" />}
-                {pageModalNotification.type === 'warning' && <ShieldAlert className="w-6 h-6" />}
-                {pageModalNotification.type === 'info' && <ShieldCheck className="w-6 h-6" />}
+          {/* Unduh APK Android Driver Mobile (Neon UI V2 Card) */}
+          <div className="pt-2 border-t border-slate-800/80 space-y-2">
+            <button
+              type="button"
+              onClick={() => setIsApkModalOpen(true)}
+              className="relative overflow-hidden w-full p-2.5 rounded-2xl neu-flat-sm bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-emerald-500/20 hover:from-emerald-500/25 hover:to-cyan-500/25 border border-emerald-400/50 hover:border-emerald-400 text-emerald-300 text-xs font-bold flex items-center justify-between gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.25)] hover:shadow-[0_0_22px_rgba(16,185,129,0.5)] group cursor-pointer"
+              title="Unduh Berkas APK Android (v1.0.4) untuk Portal Driver & Helper Mobile"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 shadow-[0_0_10px_rgba(16,185,129,0.4)] transition-transform shrink-0">
+                  <Smartphone className="w-4 h-4 animate-pulse" />
+                </div>
+                <div className="text-left min-w-0">
+                  <div className="text-[11px] font-black text-emerald-300 leading-tight truncate flex items-center gap-1.5">
+                    <span>Unduh APK Android</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 font-mono">v1.0.4</span>
+                  </div>
+                  <div className="text-[9.5px] text-slate-400 truncate leading-tight mt-0.5">
+                    Signed & Aligned APK Driver
+                  </div>
+                </div>
               </div>
-              <h4 className="font-bold text-white text-base">
-                {pageModalNotification.title}
-              </h4>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {pageModalNotification.message}
-              </p>
-            </div>
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 group-hover:bg-emerald-400 group-hover:text-slate-950 transition-all shrink-0 shadow-xs">
+                <Download className="w-3.5 h-3.5" />
+              </div>
+            </button>
 
-            <div className="pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setPageModalNotification(null)}
-                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95"
-              >
-                Oke, Mengerti
-              </button>
-            </div>
+            {/* Fitur Keluar atau Log Out dengan Neumorphic Depth */}
+            <button
+              type="button"
+              onClick={() => {
+                logisticsStore.logoutUser();
+                onOpenAuth('login');
+              }}
+              className="w-full py-2.5 px-3 rounded-xl neu-button hover:border-rose-500/50 text-slate-400 hover:text-rose-300 hover:shadow-[0_0_15px_rgba(244,63,94,0.3)] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer group"
+              title="Keluar Sesi / Log Out dari Sistem PT AKK"
+            >
+              <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-400 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Keluar (Log Out)</span>
+            </button>
           </div>
         </div>
       )}
     </div>
   );
+
+  return (
+    <>
+      {/* Mobile Top Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 flex items-center justify-between neu-flat">
+        <button
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="p-2 rounded-xl neu-button text-slate-300 hover:text-cyan-400 cursor-pointer transition active:scale-95"
+          aria-label="Toggle Navigation Menu"
+        >
+          {isMobileOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5" />}
+        </button>
+        <AkkLogo size="sm" showSubtitle={false} />
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher variant="icon-only" />
+          <button
+            onClick={() => onOpenAuth('login')}
+            className="p-2 rounded-xl neu-button text-amber-400 cursor-pointer transition active:scale-95 shadow-[0_0_8px_rgba(245,158,11,0.3)]"
+            title="Masuk / Kelola Akun"
+          >
+            <LogIn className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar (Fixed on lg+) */}
+      <aside className={`hidden lg:block fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out ${isMinimized ? 'w-20' : 'w-72'}`}>
+        {renderSidebarContent()}
+      </aside>
+
+      {/* Mobile Backdrop & Drawer */}
+      {isMobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setIsMobileOpen(false)}
+          />
+          <div className="relative w-72 max-w-[85vw] h-full shadow-2xl z-10 animate-in slide-in-from-left duration-300 ease-out">
+            {renderSidebarContent()}
+          </div>
+        </div>
+      )}
+
+
+      {/* Android APK Download Modal for Driver Mobile */}
+      <AndroidApkDownloadModal
+        isOpen={isApkModalOpen}
+        onClose={() => setIsApkModalOpen(false)}
+      />
+    </>
+  );
 };
+
+export default Sidebar;
